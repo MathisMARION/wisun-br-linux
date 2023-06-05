@@ -28,27 +28,34 @@ All the version numbers are encoded using `uint32_t` with the following mask:
 Frame structure
 ---------------
 
-The RCP can use the _Native UART_ or the _CPC_ protocol. With CPC, the frame
-structure is defined by the CPC specification.
+The RCP can use the _Native UART_ or the [_CPC_ protocol][cpc]. With CPC, the
+frame structure is defined by the CPC specification.
 
 With Native UART, the frame structure is:
 
  - `uint16_t len`  
-    Length of the payload (= `cmd` + `body` + `fcs`). Only the 11 least
-    significant bits (`0x7FF`) are used. The 5 most significant bits (`0xF800`)
-    must ignored.
+    Length of `payload`. Only the 11 least significant bits (`0x07FF`) are
+    used. The 5 most significant bits (`0xF800`) must ignored.
 
  - `uint16_t hcs`  
     CRC16 of the `len` field.
 
- - `uint16_t cmd`  
-    Command number. For now only the 8 least significant bits are used.
+ - `uint8_t payload[]`  
+    Frame payload.
+
+ - `uint16_t fcs`  
+    CRC16 of the `payload` field.
+
+Regardless of the framing protocol used, the payload always has the following
+structure:
+
+ - `uint8_t cmd`  
+    Command number.
 
  - `uint8_t body[]`  
     Command body.
 
- - `uint16_t fcs`  
-    CRC16 of (`cmd` + `body`) fields.
+[cpc]: https://docs.silabs.com/gecko-platform/latest/platform-cpc-overview
 
 Administrative commands
 -----------------------
