@@ -160,8 +160,6 @@ Send and receive data
       - "Unicast Fractional Sequence Interval" in the UTT-IE
       - "Broadcast Slot Number" in the BT-IE
       - "Broadcast Interval Offset" in the BT-IE
-      - "Unicast Slot Number" in the LUTT-IE
-      - "Unicast Interval Offset" in the LUTT-IE
       - "LFN Broadcast Slot Number" in the LBT-IE
       - "LFN Broadcast Interval Offset" in the LBT-IE
       - If the auxiliary security header is present, the device will encrypt the
