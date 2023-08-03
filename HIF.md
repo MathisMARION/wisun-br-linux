@@ -120,7 +120,7 @@ be used display the error to the user of for debugging purpose.
  - `uint8_t error_code`  
     Known error codes:
      - `0x01`: unsupported host API (`SET_HOST_API`)
-     - `0x02`: unsupported radio configuration (`SET_RADIO_CONFIG`)
+     - `0x02`: unsupported radio configuration (`SET_RADIO`)
      - `0x03`: radio not configured (`REQ_RADIO_ENABLE`)
      - `0x04`: enable to allocate entry (`SET_SEC_FRAME_COUNTER_RX`)
      - `0x05`: enable to allocate entry (`SET_FILTER_SRC16`)
@@ -394,20 +394,19 @@ Radio configuration
 
 ### `0x20 REQ_RADIO_ENABLE`
 
-Start (or stop) receiving radio data. `SET_RADIO_CONFIG`,
-`SET_FHSS_CONFIG_UC` (and probably several others) must have been called
-before this function.
+Start (or stop) receiving radio data. `SET_RADIO`, `SET_FHSS_UC` (and probably
+several others) must have been called before this function.
 
  - `bool value`  
     Only `true` is implemented
 
-### `0x21 REQ_RADIO_CONFIG_LIST`
+### `0x21 REQ_RADIO_LIST`
 
 Get the list of radio configuration supported by the device.
 
 Body of this command is empty.
 
-### `0x22 CNF_RADIO_CONFIG_LIST`
+### `0x22 CNF_RADIO_LIST`
 
  - `bool list_end`  
     If not set, the list will continue in another `CNF_RADIO_CONFIG_LIST`.
@@ -425,7 +424,7 @@ Body of this command is empty.
     - `uint32_t chan_spacing_hz`
     - `uint16_t chan_count`
 
-### `0x23 SET_RADIO_CONFIG`
+### `0x23 SET_RADIO`
 
 Configure the radio parameters.
 
@@ -435,7 +434,7 @@ Configure the radio parameters.
  - `uint8_t mcs`  
     MCS to be used if `index` points to an OFDM modulation
 
-### `0x24 SET_RADIO_REGIONAL_REGULATION`
+### `0x24 SET_RADIO_REGULATION`
 
 Allow to enable specific RF regulation rules. Most of the regulations only make
 sense with a specific channel configuration.
@@ -457,7 +456,7 @@ FIXME: define default value
 Frequency Hopping (FHSS) configuration
 --------------------------------------
 
-### `0x30 SET_FHSS_CONFIG_UC`
+### `0x30 SET_FHSS_UC`
 
  - `uint16_t flags`  
     A bitfield
@@ -497,7 +496,7 @@ Always present:
  - `bool disallow_tx_on_rx_slots`  
     TBD.
 
-### `0x31 SET_FHSS_CONFIG_FFN_BC`
+### `0x31 SET_FHSS_FFN_BC`
 
  - `uint16_t flags`  
     A bitfield:
@@ -538,7 +537,7 @@ Always present:
  - `uint8_t ffn_bc_timing accuracy`  
     (unused)
 
-### `0x32 SET_FHSS_CONFIG_LFN_BC`
+### `0x32 SET_FHSS_LFN_BC`
 
  - `uint16_t flags`  
     A bitfield:
@@ -573,7 +572,7 @@ Always present:
 
  - `uint8_t lfn_bc_sync_period`  
 
-### `0x33 SET_FHSS_CONFIG_ASYNC`
+### `0x33 SET_FHSS_ASYNC`
 
  - `uint16_t flags`  
     A bitfield:
