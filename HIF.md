@@ -1,25 +1,30 @@
 RCP Hardware Interface
 ======================
 
-This document describes the Hardware InterFace (HIF). HIF is the API between
-`wsbrd` and the RCP device.
+This document describes the Hardware Interface (HIF) for the Silicon Labs
+Wi-SUN Radio Co-Processor (RCP). The RCP implements IEEE 802.15.4 frame
+transmission and reception using Wi-SUN frequency hopping and this API
+allows a host to control it using commands sent on a serial bus.
 
 General observations
 --------------------
 
 In this specification, the prefix used in the command means:
-  - `REQ` (request): a command send from the host to the device
+  - `REQ` (request): a command sent by the host to the device
   - `SET`: special case of `REQ` to configure the device
   - `CNF` (confirmation): a reply from the device to the host
   - `IND` (indication): a spontaneous frame from the device to the host
+
+By default, requests do not receive confirmations, the only exceptions are
+[`REQ_RADIO_LIST`][rf-get] and [`REQ_DATA_TX`][tx-req].
 
 All the types used are little endian.
 
 The type `bool` is a `uint8_t`, but only the LSB is interpreted. All the other
 bits are reserved.
 
-When a bit is reserved or unassigned, it be set to 0 by the transmitter and must
-be ignored by the receiver.
+When a bit is reserved or unassigned, it must be set to 0 by the transmitter
+and must be ignored by the receiver.
 
 All the version numbers are encoded using `uint32_t` with the following mask:
   - `0xFF000000` Major revision
@@ -36,8 +41,9 @@ With Native UART, frames use the following structure, and use a CRC-16 for
 error detection.
 
  - `uint16_t len`  
-    Length of `payload`. Only the 11 least significant bits (`0x07FF`) are
-    used. The 5 most significant bits (`0xF800`) must ignored.
+    Length of the `payload` field . Only the 11 least significant bits
+    (`0x07FF`) are used. The 5 most significant bits (`0xF800`) must be
+    ignored.
 
  - `uint16_t hcs`  
     [CRC-16/MCRF4XX][hcs] of the `len` field.
@@ -64,6 +70,8 @@ structure:
 Administrative commands
 -----------------------
 
+[reset]: #0x03-req_reset
+
 ### `0x01 REQ_NOP`
 
 No-operation. Can be used to synchronize UART communication.
@@ -76,17 +84,17 @@ No-operation. Can be used to synchronize UART communication.
 No-operation. Can be used to synchronize UART communication.
 
  - `uint8_t garbage[]`  
-    Extra data may be included. Must be ignored.
+    Extra data may be included. It must be ignored.
 
 ### `0x03 REQ_RESET`
 
 Hard reset the RCP. After this command, the host will receive `IND_RESET`.
 
  - `bool enter_bootloader`  
-    If set, start the bootloader instead of normal firmware. Set this field if
-    you want to flash a new firmware. Refer to the bootloader documentation to
-    know how to send the new firmware (usually, the XMODEM protocol is used to
-    send the new firmware other the UART).
+    If set to `true`, the bootloader will start instead of the RCP application.
+    Use this option for flashing a new RCP firmware. For details on how to
+    upload a firmware (typically using the XMODEM protocol over UART), refer to
+    the bootloader documentation.
 
 ### `0x04 IND_RESET`
 
@@ -104,18 +112,17 @@ a debugger, etc...
     `1.5.0-5-ga91c352~bpo`).
 
  - `uint8_t hw_eui64[8]`  
-    EUI64 flashed in the device
+    EUI-64 flashed on the device
 
  - `uint8_t reserved[]`  
-    Extra data may be included. For backward compatibility, they must be
-    ignored.
+    Extra data may be included. For backward compatibility, it must be ignored.
 
 ### `0x05 IND_FATAL`
 
 Commands don't reply in case of success. If the device gets misconfigured or if
 any other fatal error happens, the device will reset. In this case, `IND_FATAL`
 may be sent before `IND_RESET`. It contains information about the error. It can
-be used display the error to the user of for debugging purpose.
+be used to display the error to the user for debugging purpose.
 
  - `uint8_t error_code`  
     Known error codes:
@@ -132,14 +139,17 @@ be used display the error to the user of for debugging purpose.
 
 ### `0x06 SET_HOST_API`
 
-Inform RCP about the host API version. If not send, the RCP will assume `2.0.0`.
-This command should be sent after `IND_RESET`, before any other command.
+Informs the RCP of the host API version. If this command is not sent, the RCP
+will assume that the API version is `2.0.0`. This command should be sent after
+`IND_RESET` and before any other command.
 
  - `uint32_t api_version`  
     Must be at least `0x02000000`.
 
 Send and receive data
 ---------------------
+
+[tx-req]: #0x10-req_data_tx
 
 ### `0x10 REQ_DATA_TX`
 
@@ -297,21 +307,21 @@ provide difference with the last step. Thus the message is shorter.
     Length of the next field (can be 0 if `status != 0`). Maximum value is 2047.
 
  - `uint8_t payload[]`  
-    15.4 ack frame. Can contains data if EDFE is enabled.
+    15.4 ack frame. Contains data if EDFE is enabled.
 
  - `uint64_t timestamp_mac_us`  
-    The timestamp (relative to the date of the RCP reset) when the frame have
+    The timestamp (relative to the date of the RCP reset) when the frame has
     been received on the device.
 
  - `uint32_t delay_mac_buffers_us`  
-    Duration the frame spend in the MAC buffer before to access to the RF
+    Time spent by the frame in the MAC buffer before accessing the RF
     hardware. `timestamp_mac_us + delay_mac_buffer_us` give the timestamp
     of the beginning of the first tentative to send the frame.
 
  - `uint32_t delay_rf_us`  
-    Duration the frame spend in the RF hardware before to successfully send the
-    frame. `timestamp_mac_us + delay_mac_buffer_us + delay_rf_us` give
-    the time when the frame has started to be sent.  
+    Time spent by the frame in the RF hardware before successful transmission.
+    `timestamp_mac_us + delay_mac_buffer_us + delay_rf_us` give the time when
+    the frame has started to be sent.
 
  - `uint16_t duration_tx_us`  
     Effective duration of the frame on the air. `timestamp_mac_us +
@@ -350,8 +360,8 @@ provide difference with the last step. Thus the message is shorter.
 Only present if `HAVE_MODE_SWITCH_STAT`:
 
  - `uint8_t phy_modes[4]`
-    Number time each `phy_mode` has been used. Sum of these fields is equal to
-    `tx_count2`.
+    Number of times each `phy_mode` has been used. Sum of these fields is equal
+    to `tx_count2`.
 
 ### `0x13 IND_DATA_RX`
 
@@ -362,7 +372,7 @@ Only present if `HAVE_MODE_SWITCH_STAT`:
     15.4 frame.
 
  - `uint64_t timestamp_rx_us`  
-    The timestamp (relative to the date of the RCP reset) when the frame have
+    The timestamp (relative to the date of the RCP reset) when the frame has
     been received on the device.
 
  - `uint16_t duration_rx_us`  
@@ -390,6 +400,8 @@ Only present if `HAVE_MODE_SWITCH_STAT`:
 Radio configuration
 -------------------
 
+[rf-get]: #0x21-req_radio_list
+
 ### `0x20 REQ_RADIO_ENABLE`
 
 Start (or stop) receiving radio data. `SET_RADIO`, `SET_FHSS_UC` (and probably
@@ -405,6 +417,9 @@ Get the list of radio configuration supported by the device.
 Body of this command is empty.
 
 ### `0x22 CNF_RADIO_LIST`
+
+List of radio configuration supported by the device, in response to
+`REQ_RADIO_LIST`.
 
  - `bool list_end`  
     If not set, the list will continue in another `CNF_RADIO_CONFIG_LIST`.
@@ -434,8 +449,8 @@ Configure the radio parameters.
 
 ### `0x24 SET_RADIO_REGULATION`
 
-Allow to enable specific RF regulation rules. Most of the regulations only make
-sense with a specific channel configuration.
+Enable specific RF regulation rules. Most regulations only make sense with
+specific channel configurations.
 
  - `uint32_t value`  
     - `0`: None
@@ -667,34 +682,38 @@ filter table?
 Debug
 -----
 
+[ping-req]: #0xe1-req_ping
+[ping-cnf]: #0xe2-cnf_ping
+
 ### `0xE1 REQ_PING`
 
-Send some arbitrary data to the device. The device will reply with `CNF_PING`. Use
-this command to stress and debug the link with the device.
+Send some arbitrary data to the device. The device will reply with
+[`CNF_PING`][ping-cnf]. Use this command to stress and debug the serial link
+with the device.
 
  - `uint16_t counter`  
-    Arbitrary value (usually an incrementing counter that will be send back in
+    Arbitrary value (usually an incrementing counter that will be sent back in
     confirmation).
 
  - `uint16_t reply_payload_size`  
-    Size of the payload in the `CNF_PING`
+    Size of the payload in the [`CNF_PING`][ping-cnf].
 
  - `uint16_t payload_size`  
-    Size of the next field
+    Size of the `payload` field.
 
  - `uint8_t payload[]`  
     Arbitrary data. Data is not interpreted by the RCP.
 
 ### `0xE2 CNF_PING`
 
-Reply to `REQ_PING` with some arbitrary data.
+Reply to [`REQ_PING`][ping-req] with some arbitrary data.
 
  - `uint16_t counter`  
-    `counter` received in `REQ_PING`.
+    `counter` received in [`REQ_PING`][ping-req].
 
  - `uint16_t payload_size`  
-    Same as field `reply_payload_size` in `REQ_PING`. Also define the size of
-    the next field.
+    Size of the `payload` field. Same value as the `reply_payload_size` field
+    in [`REQ_PING`][ping-req].
 
  - `uint8_t payload[]`  
     Arbitrary data.
