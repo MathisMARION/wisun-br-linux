@@ -627,64 +627,8 @@ Only present if KEY_IDENTIFY_MODE_INDEX:
  - `uint8_t key_index`  
     The `Key Index` to match in the auxiliary security header.
 
-### `0x41 SET_SEC_FRAME_COUNTER_TX`
-
- - `uint8_t slot`  
-    Key slot to assign.
-
- - `uint32_t value`  
-    New frame counter value.
-
-FIXME: This API is useless for now.
-
-### `0x42 SET_SEC_FRAME_COUNTER_RX`
-
- - `uint16_t panid`  
- - `uint16_t addr16`  
- - `uint8_t addr64[8]`  
- - `uint8_t key_id`  
-    These for fields are used to match the right key.
-
- - `uint32_t value`  
-    Frame counter value to set. If `value == 0xFFFFFFFF`, the entry is dropped.
-    If the RCP is not able to allocate the memory for the internal neighbor
-    table entry, it will send a `IND_FATAL` and reset.
-
-FIXME: should we add a field in `IND_RESET` to have the number of entry in the
-neighbor table?
-
 Filtering
 ---------
-
-### `0x50 REQ_FILTER_CONFIGURE`
-
-Ask the device to discard certain frames to the host. By default, all the
-filters are enabled.
-
- - `uint16_t value`  
-    A bitfield:
-     - `0x0001 FILTER_BAD_FCS` (forward encrypted frame if not set)
-     - `0x0002 FILTER_BAD_RSSI` (forward encrypted frame if not set)
-     - `0x0004 FILTER_BAD_HEADER` (forward encrypted frame if not set)
-     - `0x0008 FILTER_BAD_KEY` (forward encrypted frame if not set)
-     - `0x0010 FILTER_BAD_MIC`
-     - `0x0020 FILTER_BAD_FRAME_COUNTER`
-     - `0x0040 FILTER_BAD_PANID`
-     - `0x0080 FILTER_BAD_DEST`
-     - `0x0100 FILTER_BAD_SRC64`
-     - `0x0200 FILTER_BAD_SRC16`
-     - `0x1000 FILTER_NOT_DATA_FRAME_TYPE` (mainly received Ack)
-     - `0x2000 FILTER_RCP_GENERATED` (mainly transmitted Ack)
-
-### `0x58 SET_FILTER_MIN_RSSI`
-
-If `FILTER_BAD_RSSI` is set, drop frames with RSSI inferior to this value.
-
-FIXME: define default value
-
-FIXME: define units
-
- - `int32_t value`  
 
 ### `0x59 SET_FILTER_DST64`
 
@@ -692,14 +636,6 @@ If `FILTER_BAD_DEST` is set, drop unicast frames which destination is not this
 address. By default, it use the EUI64 returned in `IND_RESET`.
 
  - `uint8_t value[8]`  
-
-### `0x5A SET_FILTER_DST16`
-
-If `FILTER_BAD_DEST` is set, drop unicast frames which destination is not this
-address. Default value of `0xFFFF` (all frame with using short address are
-discarded).
-
- - `uint16_t value`  
 
 ### `0x5B SET_FILTER_PANID`
 
@@ -730,48 +666,8 @@ a IND_FATAL and reset.
 FIXME: should we add a field in IND_RESET to have the number of entry in the
 filter table?
 
-### `0x5D SET_FILTER_SRC16`
-
-If `FILTER_BAD_SRC16` is set, drop frames coming from denied short addresses.
-
- - `bool allowed_list`  
-   Instead of setting a list of denied address, set a list of allowed addresses
-
- - `uint8_t entry_count`  
-   Number of entries in the next field
-
- - `uint16_t addr16[]`  
-   Addresses to deny/allow.
-
-By default, the denied list is empty.
-
-If the RCP is not able to allocate the memory for the filter table, it will send
-a IND_FATAL and reset.
-
-FIXME: should we add a field in IND_RESET to have the number of entry in the
-filter table?
-
 Debug
 -----
-
-### `0xE0 IND_CRC_ERROR`
-
-Informative debug messages sent by the RCP when it receive a CRC error. The host
-may try to match the `len` and `hcs` fields and send the frame again. However,
-there is no way to recover the error of `hdr_error` is set.
-
- - `bool hdr_error`  
-    If true the error was in the header field. After an `hdr_error`, the RCP
-    will scan the UART data until it find a new valid header. The subsequent
-    UART error are not reported.
-
- - `uint16_t len`  
-    The copy of the `len` field as received in the frame header. If `hdr_error`
-    is set, this field is not reliable.
-
- - `uint16_t hcs`  
-    The copy of the `hcs` field as received in the frame header. If `hdr_error`
-    is set, this field is not reliable.
 
 ### `0xE1 REQ_PING`
 
