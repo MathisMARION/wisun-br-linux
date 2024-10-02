@@ -592,30 +592,58 @@ Configure asynchronous transmissions for network discovery.
 
 ## Security
 
+> [!CAUTION]
+> The RCP is responsible for encrypting and decrypting IEEE 802.15.4 frames.
+> MAC layer data appears in cleartext in HIF commands so integrators are
+> expected to secure the serial link, for example using
+> [CPC with link encpryption][cpc-sec], otherwise the system may be exposed to
+> packet injection or eavesdropping.
+
+To encrypt transmitted IEEE 802.15.4 frames, an auxiliary security header must
+be included in the buffer passed to [`REQ_DATA_TX`](#0x10-req_data_tx), and
+space must be reserved at the end of the frame for the Message Integrity Code
+(MIC) depending on the security level. The packet payload is not yet encrypted
+when passed to the RCP. The RCP is responsible for reading the auxiliary
+security header, finding the associated key, filling the frame counter field,
+encrypting the payload, and filling the MIC.
+
+Similarly, the RCP decrypts received packets and provides them to host in
+cleartext with [`IND_DATA_RX`](#0x13-ind_data_rx), with the auxiliary
+security header untouched so that the host can process it.
+
+> [!WARNING]
+> The RCP does not verify the frame counter for received frames. It is the
+> responsability of the host to maintain frame counters per key and per
+> neighbor, and check them to prevent any replay attacks.
+
+Acknowledgement frames are decrypted and sent to the host in the same manner
+with the exception that the RCP does perform a frame counter check based on
+the minimum values provided in the [`REQ_DATA_TX`](#0x10-req_data_tx) for that
+packet.
+
+> [!NOTE]
+> Only a subset of the IEEE 802.15.4 security modes is supported. Wi-SUN uses
+> security level `6` and key ID mode `1` with key indices 1 through 7. Frame
+> counter is always used.
+
+[cpc-sec]: https://github.com/SiliconLabs/cpc-daemon/blob/main/readme.md#encrypted-serial-link
+
 ### `0x40 SET_SEC_KEY`
 
- - `uint8_t slot`  
-    Key slot to assign. The Wi-SUN RCP have 8 slots.
-
- - `uint8_t key[16]`  
-    Key payload. If `key == 0`, the slot is disabled.
-
- - `uint32_t frame_counter`  
-    The initial frame counter value (for transmission). Can be changed later
-    with `SET_SEC_FRAME_COUNTER_TX`.
-
- - `uint8_t flags`  
-    A bitfield:
-     - `0x0003: KEY_IDENTIFY_MODE_MASK`:
-        - `0: KEY_IDENTIFY_MODE_IMPLICIT`: Not supported
-        - `1: KEY_IDENTIFY_MODE_INDEX`: Use `key_index`
-        - `2: KEY_IDENTIFY_MODE_SRC4`: Not supported
-        - `3: KEY_IDENTIFY_MODE_SRC8`: Not supported
-
-Only present if KEY_IDENTIFY_MODE_INDEX:
+Install a security key for encrypting/decrypting IEEE 802.15.4 frames.
 
  - `uint8_t key_index`  
-    The `Key Index` to match in the auxiliary security header.
+    Key index to use. Only values from 1 to 7 (inclusive) are supported.
+
+ - `uint8_t key[16]`  
+    Key in cleartext. If all zeroes, the key is un-installed.
+
+ - `uint32_t frame_counter`  
+    The initial frame counter value (for transmission). Should be 0 at first
+    installation, should be positive on re-installation (after a RCP reboot).
+    The RCP is responsible for incrementing the frame counter, and the value
+    is communicated to the host in [`CNF_DATA_TX`](#0x12-cnf_data_tx) after
+    each encrypted transmission.
 
 ## Packet Filtering
 
