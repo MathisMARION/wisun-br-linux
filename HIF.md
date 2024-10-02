@@ -290,8 +290,17 @@ Only present if `USE_MODE_SWITCH`:
 
 ### `0x11 REQ_DATA_TX_ABORT`
 
- - `uint16_t id`  
-    `id` provided in `REQ_DATA_TX`
+Abort a frame transmission previously started with [`REQ_DATA_TX`](#0x11-req_data_tx).
+A packet confirmation ([`CNF_DATA_TX`](#0x12-cnf_data_tx)) will be returned
+with a specific status code.
+
+> [!CAUTION]
+> The current implementation of this command is unreliable due to unhandled
+> race conditions and behavior inconsistencies. Future RCP version will address
+> these issues. Consider not using this command until then.
+
+ - `uint8_t handle`  
+    Packet `handle` (see [`REQ_DATA_TX`](#0x11-req_data_tx)).
 
 ### `0x12 CNF_DATA_TX`
 
