@@ -619,41 +619,41 @@ Only present if KEY_IDENTIFY_MODE_INDEX:
 
 ## Packet Filtering
 
-### `0x59 SET_FILTER_DST64`
+Filter out received packets in the RCP to prevent unecessary
+[`IND_DATA_RX`](#0x13-ind_data_rx) indications.
 
-If `FILTER_BAD_DEST` is set, drop unicast frames which destination is not this
-address. By default, it use the EUI64 returned in `IND_RESET`.
+### `0x58 SET_FILTER_PANID`
 
- - `uint8_t value[8]`  
+Refuse frames with an explicit PAN ID different from this value. By default,
+the value is set to `0xffff` which disables the filter.
 
-### `0x5B SET_FILTER_PANID`
+ - `uint16_t pan_id`  
 
-If `FILTER_BAD_PANID` is set, drop frames which destination is not this PAN ID.
+### `0x5A SET_FILTER_SRC64`
 
-FIXME: define default value
-
- - `uint16_t value`  
-
-### `0x5C SET_FILTER_SRC64`
-
-If `FILTER_BAD_SRC64` is set, drop frames coming from denied extended addresses.
+Refuse frames based on the source MAC address. This should only be used in
+specific testing scenarios to force network topologies. By default, the address
+list is empty.
 
  - `bool allowed_list`  
    Instead of setting a list of denied address, set a list of allowed addresses
+   where unknown ones are refused. Both ways are mutually exclusive and this
+   command always resets the address list.
 
- - `uint8_t entry_count`  
-   Number of entries in the next field
+ - `uint8_t count`  
+   Number of MAC addresses in the next field.
 
- - `uint8_t addr64[8][]`  
-   Addresses to deny/allow.
+ - `uint8_t eui64[8][]`  
+   List of MAC addresses (big endian) to deny/allow.
 
-By default, the denied list is empty.
+### `0x59 SET_FILTER_DST64`
 
-If the RCP is not able to allocate the memory for the filter table, it will send
-a IND_FATAL and reset.
+Refuse unicast frames whose destination MAC address is not this EUI-64. By
+default, the EUI-64 returned in [`IND_RESET`](#0x04-ind_reset) is used. This
+filter cannot be disabled currently.
 
-FIXME: should we add a field in IND_RESET to have the number of entry in the
-filter table?
+ - `uint8_t eui64[8]`  
+    MAC address (big endian).
 
 ## Debug
 
