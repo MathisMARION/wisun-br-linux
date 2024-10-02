@@ -157,7 +157,7 @@ will assume that the API version is `2.0.0`. This command should be sent after
 ### `0x10 REQ_DATA_TX`
 
  - `uint8_t id`  
-    An arbitrary ID send back in `CNF_DATA_TX`. Also used in `REQ_DATA_TX_ABORT`.
+    An arbitrary ID send back in `CNF_DATA_TX`.
 
  - `uint16_t payload_len`  
     Length of the next field
@@ -287,20 +287,6 @@ Only present if `USE_MODE_SWITCH`:
 
  - `uint8_t phy_modes[2][4]`  
     An array of `phy_mode_id` and number of attempt to do for each of them.
-
-### `0x11 REQ_DATA_TX_ABORT`
-
-Abort a frame transmission previously started with [`REQ_DATA_TX`](#0x11-req_data_tx).
-A packet confirmation ([`CNF_DATA_TX`](#0x12-cnf_data_tx)) will be returned
-with a specific status code.
-
-> [!CAUTION]
-> The current implementation of this command is unreliable due to unhandled
-> race conditions and behavior inconsistencies. Future RCP version will address
-> these issues. Consider not using this command until then.
-
- - `uint8_t handle`  
-    Packet `handle` (see [`REQ_DATA_TX`](#0x11-req_data_tx)).
 
 ### `0x12 CNF_DATA_TX`
 
