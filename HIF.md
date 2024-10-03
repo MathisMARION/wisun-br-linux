@@ -471,7 +471,7 @@ FIXME: define default value
 ## Frequency Hopping (FHSS) configuration
 
 Several schemes are used in Wi-SUN to transmit or receive packets using
-frequency hopping. These are independently defined using a set of parameters,
+frequency hopping. These are independently defined using a set of parameters
 and may differ between transmission and reception. The following table
 summarizes which commands configure the various FHSS parameters. Note that
 [`REQ_DATA_TX`][tx-req] always needs to be called for transmission, but timing
@@ -490,154 +490,110 @@ of these commands for a more detailed explanation.
 | TX Broadcast to LFN                   | [`SET_FHSS_LFN_BC`][bc-lfn] |
 | TX Asynchronous (MLME-WS-ASYNC-FRAME) | [`SET_FHSS_ASYNC`][async]   |
 
-[fhss]:   #frequency-hopping-fhss-configuration
-[uc]:     #0x30-set_fhss_uc
-[bc]:     #0x31-set_fhss_ffn_bc
-[bc-lfn]: #0x32-set_fhss_lfn_bc
-[async]:  #0x33-set_fhss_async
+### Channel Sequence
+
+Most [`SET_FHSS`][fhss] commands configure a channel sequence using the
+following variable-length structure:
+
+ - `uint8_t chan_func`  
+    Wi-SUN channel function, supported values are:
+    - `0`: Single fixed channel. (API >= 2.1.1)
+    - `2`: Direct Hash 1 (DH1CF) defined by Wi-SUN.
+
+Only present if `chan_func == 0`:
+
+  - `uint16_t chan_fixed`  
+     Fixed channel number, valid range depends on the selected PHY.
+
+Only present if `chan_func == 2`:
+
+  - `uint8_t chan_mask_len`  
+     Number of bytes in the following channel mask.
+
+  - `uint8_t chan_mask[]`  
+     Bitmask of used channels (1 for used, 0 for excluded). Channels are
+     counted byte by byte, from least to most significant bit (channel `n` maps
+     to `chan_mask[n / 8] & (1 << (n % 8))`). Integrators are responsible for
+     meeting local regulation constraints by excluding disallowed channels from
+     the selected PHY.
+
+[fhss]:     #frequency-hopping-fhss-configuration
+[chan-seq]: #channel-sequence
+[uc]:       #0x30-set_fhss_uc
+[bc]:       #0x31-set_fhss_ffn_bc
+[bc-lfn]:   #0x32-set_fhss_lfn_bc
+[async]:    #0x33-set_fhss_async
 
 ### `0x30 SET_FHSS_UC`
 
- - `uint16_t flags`  
-    A bitfield
-    :
-     - `0x0030: FHSS_CHAN_FUNC_MASK`:
-        - `0: FHSS_CHAN_FUNC_FIXED`: Use Fixed Channel
-        - `1: FHSS_CHAN_FUNC_TR51`: Use TR51
-        - `2: FHSS_CHAN_FUNC_DH1`: Use DH1
-        - `3: RESERVED`: (`FHSS_CHAN_FUNC_AUTO`)
+Configure unicast schedule for reception.
 
-Only present if `FHSS_CHAN_FUNC_FIXED`:
+ - `uint8_t dwell_interval`  
+    Unicast dwell interval in milliseconds (from US-IE).
 
- - `uint16_t chan_nr`  
-    Fixed channel value.
-
-Only present if `FHSS_CHAN_FUNC_DH1`:
-
- - `uint8_t chan_mask_len`  
-    Length of the next field. Maximum value is 64.
-
- - `uint8_t chan_mask[]`  
-    Bitmap of masked channels.
-
-Only present if `FHSS_CHAN_FUNC_TR51`:
-
-  TBD
-
-Always present:
-
- - `uint16_t uc_dwell_interval_ms`  
-    Note this only impact the Rx scheduling. The `dwell_interval` of the
-    destination is specified in `PROP_FRAME`.
-
- - `uint8_t hop_rank`  
-    Rank number in the RPL tree. If unknown, 0 is fine (FIXME: fact check that).
-
- - `bool disallow_tx_on_rx_slots`  
-    TBD.
+ - `struct chan_seq`  
+   See ["Channel Sequence"][chan-seq].
 
 ### `0x31 SET_FHSS_FFN_BC`
 
- - `uint16_t flags`  
-    A bitfield:
-     - `0x0030: FHSS_CHAN_FUNC_MASK`:
-        - `0: FHSS_CHAN_FUNC_FIXED`: Use Fixed Channel
-        - `1: FHSS_CHAN_FUNC_TR51`: Use TR51
-        - `2: FHSS_CHAN_FUNC_DH1`: Use DH1
-        - `3: RESERVED`: (`FHSS_CHAN_FUNC_AUTO`)
+Configure broadcast schedule for reception and transmission from/to FFN.
 
-Only present if `FHSS_CHAN_FUNC_FIXED`:
+ - `uint32_t interval`  
+    Broadcast interval in milliseconds (from BS-IE).
 
- - `uint16_t chan_nr`  
-    Fixed channel value.
+ - `uint16_t bsi`  
+    Broadcast Schedule ID (from BS-IE).
 
-Only present if `FHSS_CHAN_FUNC_DH1`:
+ - `uint16_t dwell_interval`  
+    Broadcast dwell interval in milliseconds (from BS-IE).
 
- - `uint8_t chan_mask_len`  
-    Length of the next field. Maximum value is 64.
+ - `struct chan_seq`  
+   See ["Channel Sequence"][chan-seq].
 
- - `uint8_t chan_mask[]`  
-    Bitmap of masked channels.
-
-Only present if `FHSS_CHAN_FUNC_TR51`:
-
-  TBD
-
-Always present:
-
- - `uint16_t ffn_bc_broadcast_schedule_id`  
-
- - `uint32_t ffn_bc_interval_ms`  
-
- - `uint16_t ffn_bc_dwell_interval`  
-
- - `uint8_t ffn_bc_clock_drift`  
-    (unused)
-
- - `uint8_t ffn_bc_timing accuracy`  
-    (unused)
+<!-- TODO: document parent BS-IE following -->
 
 ### `0x32 SET_FHSS_LFN_BC`
 
- - `uint16_t flags`  
-    A bitfield:
-     - `0x0030: FHSS_CHAN_FUNC_MASK`:
-        - `0: FHSS_CHAN_FUNC_FIXED`: Use Fixed Channel
-        - `1: FHSS_CHAN_FUNC_TR51`: Use TR51
-        - `2: FHSS_CHAN_FUNC_DH1`: Use DH1
-        - `3: RESERVED`: (FHSS_CHAN_FUNC_AUTO)
+Configure broadcast schedule for transmission to LFN.
 
-Only present if `FHSS_CHAN_FUNC_FIXED`:
+ - `uint16_t interval`  
+    LFN broadcast interval in milliseconds (from LBS-IE).
 
- - `uint16_t chan_nr`
-    Fixed channel value.
+ - `uint16_t bsi`  
+    LFN broadcast Schedule ID (from LBS-IE).
 
-Only present if `FHSS_CHAN_FUNC_DH1`:
+ - `struct chan_seq`  
+   See ["Channel Sequence"][chan-seq].
 
- - `uint8_t chan_mask_len`  
-    Length of the next field. Maximum value is 64.
+> [!WARNING]
+> The current RCP implementation uses the same set of parameters for FFN and
+> LFN broadcast channel sequences. Thus, [`SET_FHSS_FFN_BC`][bc] and
+> [`SET_FHSS_LFN_BC`][bc-lfn] override each other's channel sequence. The other
+> parameters are distinct.
 
- - `uint8_t chan_mask[]`  
-    Bitmap of masked channels.
-
-Only present if `FHSS_CHAN_FUNC_TR51`:
-
-  TBD
-
-Always present:
-
- - `uint32_t lfn_bc_interval_ms`  
-
- - `uint16_t lfn_bc_broadcast_schedule_id`  
-
- - `uint8_t lfn_bc_sync_period`  
+> [!NOTE]
+> The host is responsible for periodically sending LFN Time Sync frames in
+> order to maintain broadcast timing in LFN children.
 
 ### `0x33 SET_FHSS_ASYNC`
 
- - `uint16_t flags`  
-    A bitfield:
-     - `0x0030: FHSS_CHAN_FUNC_MASK`:
-        - `0: FHSS_CHAN_FUNC_FIXED`: Use Fixed Channel
-        - `1: FHSS_CHAN_FUNC_TR51`: Use TR51
-        - `2: FHSS_CHAN_FUNC_DH1`: Use DH1
-        - `3: RESERVED`: (`FHSS_CHAN_FUNC_AUTO`)
+Configure asynchronous transmissions for network discovery.
 
-Only present if `FHSS_CHAN_FUNC_FIXED`:
+ - `uint32_t tx_duration_ms`  
+    Maximum number of milliseconds the RCP is allowed to stay in continuous TX
+    for an async transmission. If that duration is exceeded, the async
+    transmission is split into chunks of that duration until all channels have
+    been used. This mechanism makes the RCP radio available for other tasks
+    between the async chunks, which becomes relevant for PHY configurations
+    with many channels. By default, the value is set to `0xffffffff`, which
+    disables this feature.
 
- - `uint16_t chan_nr`  
-    Fixed channel value.
+  - `uint8_t chan_mask_len`  
+     Number of bytes in the following channel mask.
 
-Only present if `FHSS_CHAN_FUNC_DH1`:
-
- - `uint8_t chan_mask_len`  
-    Length of the next field. Maximum value is 64.
-
- - `uint8_t chan_mask[]`  
-    Bitmap of masked channels.
-
-Only present if `FHSS_CHAN_FUNC_TR51`:
-
-  TBD
+  - `uint8_t chan_mask[]`  
+     Bitmask of channels to use for transmission. See the same field in
+     ["Channel Sequence"][chan-seq] for more details.
 
 ## Security
 
