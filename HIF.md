@@ -462,6 +462,32 @@ FIXME: define default value
 
 ## Frequency Hopping (FHSS) configuration
 
+Several schemes are used in Wi-SUN to transmit or receive packets using
+frequency hopping. These are independently defined using a set of parameters,
+and may differ between transmission and reception. The following table
+summarizes which commands configure the various FHSS parameters. Note that
+[`REQ_DATA_TX`][tx-req] always needs to be called for transmission, but timing
+parameters are sometimes passed with the command, and sometimes stored in the
+RCP and configured once using a [`SET_FHSS`][fhss] command. See the description
+of these commands for a more detailed explanation.
+
+|  FHSS type                            | Location of FHSS parameters |
+|---------------------------------------|-----------------------------|
+| RX Unicast                            | [`SET_FHSS_UC`][uc]         |
+| RX Broadcast                          | [`SET_FHSS_FFN_BC`][bc]     |
+| TX Unicast to FFN                     | [`REQ_DATA_TX`][tx-req]     |
+| TX Broadcast to FFN                   | [`SET_FHSS_FFN_BC`][bc]     |
+| TX Unicast to LFN                     | [`REQ_DATA_TX`][tx-req]     |
+| TX Unicast PAN Advert to LFN          | [`REQ_DATA_TX`][tx-req]     |
+| TX Broadcast to LFN                   | [`SET_FHSS_LFN_BC`][bc-lfn] |
+| TX Asynchronous (MLME-WS-ASYNC-FRAME) | [`SET_FHSS_ASYNC`][async]   |
+
+[fhss]:   #frequency-hopping-fhss-configuration
+[uc]:     #0x30-set_fhss_uc
+[bc]:     #0x31-set_fhss_ffn_bc
+[bc-lfn]: #0x32-set_fhss_lfn_bc
+[async]:  #0x33-set_fhss_async
+
 ### `0x30 SET_FHSS_UC`
 
  - `uint16_t flags`  
