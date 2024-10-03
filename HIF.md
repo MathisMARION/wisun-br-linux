@@ -1,13 +1,11 @@
-RCP Hardware Interface
-======================
+# RCP Hardware Interface
 
 This document describes the Hardware Interface (HIF) for the Silicon Labs
 Wi-SUN Radio Co-Processor (RCP). The RCP implements IEEE 802.15.4 frame
 transmission and reception using Wi-SUN frequency hopping and this API
 allows a host to control it using commands sent on a serial bus.
 
-General observations
---------------------
+## General observations
 
 In this specification, the prefix used in the command means:
   - `REQ` (request): a command sent by the host to the device
@@ -31,8 +29,7 @@ All the version numbers are encoded using `uint32_t` with the following mask:
   - `0x00FFFF00` Minor revision
   - `0x000000FF` Patch
 
-Frame structure
----------------
+## Frame structure
 
 The RCP can use the _Native UART_ or the [_CPC_ protocol][cpc]. With CPC, the
 frame structure is defined by the CPC specification.
@@ -67,8 +64,7 @@ structure:
 [hcs]: https://reveng.sourceforge.io/crc-catalogue/16.htm#crc.cat.crc-16-mcrf4xx
 [fcs]: https://reveng.sourceforge.io/crc-catalogue/16.htm#crc.cat.crc-16-iso-iec-14443-3-a
 
-Administrative commands
------------------------
+## Administrative commands
 
 [reset]: #0x03-req_reset
 
@@ -146,8 +142,7 @@ will assume that the API version is `2.0.0`. This command should be sent after
  - `uint32_t api_version`  
     Must be at least `0x02000000`.
 
-Send and receive data
----------------------
+## Send and receive data
 
 [tx-req]: #0x10-req_data_tx
 
@@ -397,8 +392,7 @@ Only present if `HAVE_MODE_SWITCH_STAT`:
  - `uint8_t flags`  
     Reserved for future usage.
 
-Radio configuration
--------------------
+## Radio configuration
 
 [rf-get]: #0x21-req_radio_list
 
@@ -466,8 +460,7 @@ FIXME: define default value
 
  - `int32_t value`  
 
-Frequency Hopping (FHSS) configuration
---------------------------------------
+## Frequency Hopping (FHSS) configuration
 
 ### `0x30 SET_FHSS_UC`
 
@@ -612,8 +605,7 @@ Only present if `FHSS_CHAN_FUNC_TR51`:
 
   TBD
 
-Security
---------
+## Security
 
 ### `0x40 SET_SEC_KEY`
 
@@ -640,8 +632,7 @@ Only present if KEY_IDENTIFY_MODE_INDEX:
  - `uint8_t key_index`  
     The `Key Index` to match in the auxiliary security header.
 
-Filtering
----------
+## Packet Filtering
 
 ### `0x59 SET_FILTER_DST64`
 
@@ -679,8 +670,7 @@ a IND_FATAL and reset.
 FIXME: should we add a field in IND_RESET to have the number of entry in the
 filter table?
 
-Debug
------
+## Debug
 
 [ping-req]: #0xe1-req_ping
 [ping-cnf]: #0xe2-cnf_ping
@@ -718,8 +708,7 @@ Reply to [`REQ_PING`][ping-req] with some arbitrary data.
  - `uint8_t payload[]`  
     Arbitrary data.
 
-Simulation
------------
+## Simulation
 
 ### `0xF0 IND_REPLAY_TIMER`
 
