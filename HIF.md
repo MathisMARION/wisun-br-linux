@@ -24,10 +24,18 @@ bits are reserved.
 When a bit is reserved or unassigned, it must be set to 0 by the transmitter
 and must be ignored by the receiver.
 
+All strings are null-terminated.
+
 All the version numbers are encoded using `uint32_t` with the following mask:
   - `0xFF000000` Major revision
   - `0x00FFFF00` Minor revision
   - `0x000000FF` Patch
+
+All timestamps are based on the RCP timebase, measured in microseconds, with
+the origin set at the device reset.
+
+All channel numbers are defined as if there were no channel mask applied
+(_ChanN = Chan0 + N * ChanSpacing_).
 
 ## Frame structure
 
