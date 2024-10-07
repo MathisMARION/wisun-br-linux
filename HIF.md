@@ -351,37 +351,31 @@ Status codes:
 
 ### `0x13 IND_DATA_RX`
 
- - `uint16_t payload_len`  
-    Length of the next field. Maximum value is 2047.
+Receive IEEE 802.15.4 frames. The RCP will start emitting these indications
+once the radio is started with [`SET_RADIO`][rf-set]. See
+["Packet Filtering"][filter] to limit the amount of frames accepted.
 
- - `uint8_t payload[]`  
-    15.4 frame.
+ - `uint16_t frame_len`  
+    Length of the received IEEE 802.15.4 frame.
+
+ - `uint8_t frame[]`  
+    Decrypted IEEE 802.15.4 frame, (see ["Security"][sec]).
 
  - `uint64_t timestamp_rx_us`  
     The timestamp (relative to the date of the RCP reset) when the frame has
     been received on the device.
 
- - `uint16_t duration_rx_us`  
-    Effective duration of the frame on the air. `timestamp_rx_us +
-    duration_rx` gives the timestamp of the end of the rx transmission.
+ - `uint8_t lqi`  
+    Received Link Quality Indicator (LQI) as reported by [RAIL][lqi].
 
- - `uint8_t rx_lqi`  
+ - `int8_t rx_power_dbm`  
+    Received power in dBm as reported by [RAIL][rssi].
 
- - `int16_t rx_signal_strength_dbm`  
+ - `uint8_t phy_mode_id`  
+    Wi-SUN _PhyModeId_ used during reception.
 
- - `uint8_t rx_phymode_id`  
-    The effective phy used.
-
- - `uint16_t rx_channel`  
-    The effective channel used.
-
- - `uint16_t filter_flags`  
-    Same bit field than `PROP_FILTERS`  
-    If one bit is set, the frame should had been filtered but the filter is not
-    enabled.
-
- - `uint8_t flags`  
-    Reserved for future usage.
+ - `uint16_t chan_num`  
+    Channel number used during reception.
 
 ## Radio configuration
 
@@ -691,6 +685,8 @@ Install a security key for encrypting/decrypting IEEE 802.15.4 frames.
 
 Filter out received packets in the RCP to prevent unecessary
 [`IND_DATA_RX`](#0x13-ind_data_rx) indications.
+
+[filter]: #packet-filtering
 
 ### `0x58 SET_FILTER_PANID`
 
