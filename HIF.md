@@ -579,7 +579,38 @@ Configure broadcast schedule for reception and transmission from/to FFN.
  - `struct chan_seq`  
    See ["Channel Sequence"][chan-seq].
 
-<!-- TODO: document parent BS-IE following -->
+If API >= 2.3.0 (optional block):
+
+ - `uint8_t eui64[8]`  
+    MAC address of a neighboring node whose broadcast schedule should be
+    followed (typically a RPL parent or an EAPoL target). The RCP will read
+    the BT-IE of frames received from that source address to maintain its
+    broadcast schedule synchronized, which prevents needing to regularly update
+    RCP timing from the host. By default, the address is set to
+    `ff:ff:ff:ff:ff:ff:ff:ff`, which disables the parent following. Not
+    including this block in the command also disables parent following. The
+    next parameters set up the initial timings.
+
+ - `uint64_t bt_timestamp_us`  
+    Timestamp associated with the last received BT-IE from this node. The host
+    will use the `timestamp_us` value from [`CNF_DATA_TX`][tx-cnf] and
+    [`IND_DATA_RX`][rx].
+
+ - `uint16_t slot`  
+    Broadcast slot (from BT-IE).
+
+ - `uint32_t interval_offset_ms`  
+    Broadcast interval offset (from BT-IE).
+
+ - `uint32_t frame_counters[4]`  
+    Initial frame counters for this node for all keys (indices 1 through 4). As
+    described in ["Security"][sec], the RCP generally does not check for frame
+    counters since it is the responsability of the host. However this makes it
+    easy to break the RCP broadcast schedule by replaying a frame containing a
+    BT-IE. Thus the RCP can track the frame counters for a single parent. These
+    counters are not reset when installing a new key, so it is recommended to
+    always call [`SET_FHSS_FFN_BC`][bc] with updated counters right after
+    calling [`SEC_SET_KEY`][key].
 
 ### `0x32 SET_FHSS_LFN_BC`
 
