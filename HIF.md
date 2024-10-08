@@ -176,6 +176,16 @@ will assume that the API version is `2.0.0`. This command should be sent after
 
 ## Send and receive data
 
+Only a subset of the IEEE 802.15.4 frame formats are supported for the needs of
+Wi-SUN:
+
+  - Frame type must be either `1` (data) or `2` (ack, [`CNF_DATA_TX`][tx-cnf]
+    only).
+  - Frame version must be `2`.
+  - Source address mode must be `3`.
+  - Destination address mode must be either `0` or `3`.
+  - See ["Security"][sec] for limits on the auxiliary security header.
+
 [tx-req]: #0x10-req_data_tx
 [tx-cnf]: #0x12-cnf_data_tx
 [rx]:     #0x13-ind_data_rx
