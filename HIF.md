@@ -31,20 +31,21 @@ Frame structure
 The RCP can use the _Native UART_ or the [_CPC_ protocol][cpc]. With CPC, the
 frame structure is defined by the CPC specification.
 
-With Native UART, the frame structure is:
+With Native UART, frames use the following structure, and use a CRC-16 for
+error detection.
 
  - `uint16_t len`  
     Length of `payload`. Only the 11 least significant bits (`0x07FF`) are
     used. The 5 most significant bits (`0xF800`) must ignored.
 
  - `uint16_t hcs`  
-    CRC16 of the `len` field.
+    [CRC-16/MCRF4XX][hcs] of the `len` field.
 
  - `uint8_t payload[]`  
     Frame payload.
 
  - `uint16_t fcs`  
-    CRC16 of the `payload` field.
+    [CRC-A][fcs] of the `payload` field.
 
 Regardless of the framing protocol used, the payload always has the following
 structure:
@@ -56,6 +57,8 @@ structure:
     Command body.
 
 [cpc]: https://docs.silabs.com/gecko-platform/latest/platform-cpc-overview
+[hcs]: https://reveng.sourceforge.io/crc-catalogue/16.htm#crc.cat.crc-16-mcrf4xx
+[fcs]: https://reveng.sourceforge.io/crc-catalogue/16.htm#crc.cat.crc-16-iso-iec-14443-3-a
 
 Administrative commands
 -----------------------
