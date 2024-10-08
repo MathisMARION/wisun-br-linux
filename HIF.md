@@ -288,76 +288,66 @@ Only present if `MODE_SWITCH`:
 
 ### `0x12 CNF_DATA_TX`
 
-Status of the earlier `REQ_DATA_TX`.
+Status of an earlier data request ([`REQ_DATA_TX`][tx-req]). Also returns the
+IEEE 802.15.4 acknowledgement frame if the request had the acknowledgement
+request bit set in the header.
 
-This API contains several timestamps. Instead encoding absolute timestamps, it
-provide difference with the last step. Thus the message is shorter.
-
- - `uint8_t id`  
-    `id` provided in `REQ_DATA_TX`
+ - `uint8_t handle`  
+    Frame handle, as provided in [`REQ_DATA_TX`][tx-req].
 
  - `uint8_t status`  
-    Fine if 0. The fields below may be invalid if `status != 0`
+    See the table below for a list of status codes. The fields below may be
+    invalid if `status != 0`.
 
- - `uint16_t payload_len`  
-    Length of the next field (can be 0 if `status != 0`). Maximum value is 2047.
+ - `uint16_t frame_len`  
+    Length of the IEEE 802.15.4 acknowledgment frame if received.
 
- - `uint8_t payload[]`  
-    15.4 ack frame. Contains data if EDFE is enabled.
+ - `uint8_t frame[]`  
+    Decrypted IEEE 802.15.4 acknowledgment frame (see ["Security"][sec]).
+    <!-- TODO: Explain EDFE. -->
 
- - `uint64_t timestamp_mac_us`  
+ - `uint64_t timestamp_us`  
     The timestamp (relative to the date of the RCP reset) when the frame has
-    been received on the device.
+    been received.
 
- - `uint32_t delay_mac_buffers_us`  
-    Time spent by the frame in the MAC buffer before accessing the RF
-    hardware. `timestamp_mac_us + delay_mac_buffer_us` give the timestamp
-    of the beginning of the first tentative to send the frame.
+ - `uint8_t lqi`  
+    Received Link Quality Indicator (LQI) as reported by [RAIL][lqi] (ACK
+    received only).
 
- - `uint32_t delay_rf_us`  
-    Time spent by the frame in the RF hardware before successful transmission.
-    `timestamp_mac_us + delay_mac_buffer_us + delay_rf_us` give the time when
-    the frame has started to be sent.
+ - `int8_t rx_power_dbm`  
+    Received power in dBm as reported by [RAIL][rssi] (ACK received only).
 
- - `uint16_t duration_tx_us`  
-    Effective duration of the frame on the air. `timestamp_mac_us +
-    delay_mac_buffer_us + delay_rf_us + duration_tx` gives the timestamp of
-    the end of the tx transmission.  
+ - `uint32_t frame_counter`  
+    Frame counter used in the successful transmission (see `frame_counter` in
+    [`SEC_SET_KEY`][key]). Only valid if the request included an auxiliary
+    security header.
+    <!-- TODO: Return the last used frame counter, even if unsuccessful. -->
 
- - `uint16_t delay_ack_us`  
-    Delay between end of frame transmission and the start of ack frame.
-    `tx_timestamp_mac_us + delay_mac_buffer_us + delay_rf_us +
-    duration_tx + delay_ack_us` give the timestamp of the reception of the ack
-    (aka `rx_timestamp_us`).  
+ - `uint16_t chan_num`  
+    Channel number used in the successful transmission.
 
- - `uint8_t  rx_lqi`  
+ - `uint8_t cca_failures`  
+    Number of times channel access has failed in the last CSMA-CA attempt.
 
- - `int16_t  rx_signal_strength_dbm`  
-    More or less the same than RSSI.  
+ - `uint8_t tx_failures`  
+    Number of transmission failures (does not account for CCA failures).
+    <!-- TODO: Make this description more precise. -->
 
- - `uint32_t tx_frame_counter`  
+ - `uint8_t reserved`
 
- - `uint16_t tx_channel`  
-    The effective channel used.  
+Status codes:
 
- - `uint8_t tx_count1`  
-    Number of transmissions including retries due to CCA.  
-    If `status == 0`, `tx_count1` is at least 1.
+| Value | Description
+|-------|-------------
+|`0x00` | Success.
+|`0x01` | Not enough memory available.
+|`0x02` | CCA failure on all channel access attempts.
+|`0x03` | No ACK received (if ACK bit set in request).
+|`0x04` | Frame spent too long in RCP (10s for unicast, 20s for broadcast, 40s for async, 300s for LFN).
+|`0x05` | RCP internal error (reach out Silicon Labs support).
 
- - `uint8_t tx_count2`  
-    Number of transmission without counting failed CCA. `tx_count1` is always `>=
-    tx_count2`.  
-    If `status == 0`, `tx_count2` is at least 1.
-
- - `uint8_t flags`  
-    A bitfield:
-    - `0x01: HAVE_MODE_SWITCH_STAT`
-
-Only present if `HAVE_MODE_SWITCH_STAT`:
-
- - `uint8_t phy_modes[4]`
-    Number of times each `phy_mode` has been used. Sum of these fields is equal
-    to `tx_count2`.
+[lqi]:  https://docs.silabs.com/rail/latest/rail-api/rail-rx-packet-details-t#lqi
+[rssi]: https://docs.silabs.com/rail/latest/rail-api/rail-rx-packet-details-t#rssi
 
 ### `0x13 IND_DATA_RX`
 
@@ -677,6 +667,7 @@ packet.
 > counter is always used.
 
 [sec]: #security
+[key]: #0x40-set_sec_key
 [cpc-sec]: https://github.com/SiliconLabs/cpc-daemon/blob/main/readme.md#encrypted-serial-link
 
 ### `0x40 SET_SEC_KEY`
