@@ -758,14 +758,3 @@ Reply to [`REQ_PING`][ping-req] with some arbitrary data.
 
  - `uint8_t payload[]`  
     Arbitrary data.
-
-## Simulation
-
-### `0xF0 IND_REPLAY_TIMER`
-
-Only for simulation purpose. The device will never send it.
-
-### `0xF1 IND_REPLAY_SOCKET`
-
-Only for simulation purpose. The device will never send it.
-
