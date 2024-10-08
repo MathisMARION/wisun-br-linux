@@ -177,141 +177,114 @@ will assume that the API version is `2.0.0`. This command should be sent after
 ## Send and receive data
 
 [tx-req]: #0x10-req_data_tx
+[tx-cnf]: #0x12-cnf_data_tx
 [rx]:     #0x13-ind_data_rx
 
 ### `0x10 REQ_DATA_TX`
 
- - `uint8_t id`  
-    An arbitrary ID send back in `CNF_DATA_TX`.
+Sends a IEEE 802.15.4 frame. All data requests are followed by a data
+confirmation ([`CNF_DATA_TX`][tx-cnf]) once the transaction is complete, even
+in case of transmission failure or abort.
 
- - `uint16_t payload_len`  
-    Length of the next field
+ - `uint8_t handle`  
+    A unique arbitrary number used to identify a packet transmission in the
+    RCP. Sent back in [`CNF_DATA_TX`][tx-cnf].
 
- - `uint8_t payload[]`  
-    A well formed 15.4 frame (at least, it must start with a valid 15.4 header).
-    The device will retrieve the destination address, the auxiliary security
-    header and other 15.4 properties from this field.
+ - `uint16_t frame_len`  
+    Length of the IEEE 802.15.4 frame to transmit.
 
-    In addition, if the following fields are present, they are automatically
-    updated by the device:
+ - `uint8_t frame[]`  
+    An IEEE 802.15.4 frame without PHR and FCS. The RCP reads and interprets the
+    header to determine what processing needs to be done. The frame must not be
+    encrypted at this stage, see ["Security"][sec] for more details.
+
+    If the following fields are present, they are automatically filled by the
+    RCP (their input value is ignored and overwritten):
       - Sequence number
-      - "Unicast Fractional Sequence Interval" in the UTT-IE
-      - "Broadcast Slot Number" in the BT-IE
-      - "Broadcast Interval Offset" in the BT-IE
-      - "LFN Broadcast Slot Number" in the LBT-IE
-      - "LFN Broadcast Interval Offset" in the LBT-IE
-      - If the auxiliary security header is present, the device will encrypt the
-        15.4 payload (see `SET_SEC_KEY`) and fill the MIC and the frame
-        counter
+      - Timing parameters in Wi-SUN IEs (UTT, BT, LBT, LTO) (see
+        ["FHSS Configuration"][fhss])
+      - Frame counter (see ["Security"][sec])
+      - Message Integrity Code (MIC) (see ["Security"][sec])
+
+    <!-- TODO: Explain EDFE -->
 
  - `uint16_t flags`  
     A bitfield:
-     - `0x0007 FHSS_TYPE_MASK`: Type of frequency hopping algorithm to use:
-         - `0x00 FHSS_TYPE_FFN_UC`
-         - `0x01 FHSS_TYPE_FFN_BC`
-         - `0x02 FHSS_TYPE_LFN_UC`
-         - `0x03 FHSS_TYPE_LFN_BC`
-         - `0x04 FHSS_TYPE_ASYNC`
-         - `0x06 FHSS_TYPE_LFN_PA`
-     - `0x0008 RESERVED`: Possible extension of `FHSS_TYPE_MASK`
-     - `0x0030 FHSS_CHAN_FUNC_MASK`:
-         - `0x00 FHSS_CHAN_FUNC_FIXED`
-         - `0x01 FHSS_CHAN_FUNC_TR51`
-         - `0x02 FHSS_CHAN_FUNC_DH1`
-         - `0x03 FHSS_CHAN_FUNC_AUTO`: Use value specified in `PROP_CONF_FHSS`.
-           The exactly meaning depend of `FHSS_TYPE_MASK`
-     - `0x0040 RESERVED`: Possible extension of `FHSS_CHAN_FUNC_MASK`
-     - `0x0080 EDFE`
-     - `0x0100 USE_MODE_SWITCH`
-     - `0x0600 RESERVED`: For priority
+     - `0x0007 FHSS_TYPE_MASK`: Type of frequency hopping algorithm to use (see
+        ["FHSS Configuration"][fhss]):
+         - `0x00 FHSS_TYPE_FFN_UC`: Unicast to FFN
+         - `0x01 FHSS_TYPE_FFN_BC`: Broadcast to FFN
+         - `0x02 FHSS_TYPE_LFN_UC`: Unicast to LFN
+         - `0x03 FHSS_TYPE_LFN_BC`: Broadcast to LFN
+         - `0x04 FHSS_TYPE_ASYNC`:  Asynchronous
+         - `0x06 FHSS_TYPE_LFN_PA`: LFN PAN Advertisement
+     - `0x0010 FHSS_DEFAULT`:  
+         - `0`: Schedule information is passed explicitly in this request.
+            Supported with `FFN_UC`, `LFN_UC`, `LFN_PA`.
+         - `1`: Use schedule information previously configured using a
+            [`SET_FHSS`][fhss] command. Supported with `FFN_BC`, `LFN_BC`,
+            `ASYNC`.
+     - `0x0020 MODE_SWITCH`: Attempt mode switch with a list of specified PHYs.
+       Only supported with `FHSS_TYPE_FFN_UC`.
+     - `0x1fc0 FRAME_COUNTERS`: Bitmask of frame counters per key.
+     - `0x2000 MODE_SWITCH_TYPE` (API >= 2.1.0):
+       - `0`: PHY mode switch (PHR, default before API 2.1.0)
+       - `1`: MAC mode switch (MAC command frame)
 
 Only present if `FHSS_TYPE_FFN_UC`:
 
- - `uint64_t rx_timestamp_mac_us`  
-    Timestamp (relative to the date of the RCP reset) of the last received
-    message for this node. The host will use the `timestamp_mac_us` value from
-    commands `CNF_DATA_TX` and `IND_DATA_RX`.
-    FIXME: Is uint32_t in milliseconds would be sufficient? Should we spend 4
-    extra bytes for this data?
-
- - `uint24_t ufsi`  
-
- - `uint8_t dwell_interval`  
-
- - `uint8_t clock_drift`  
-    (unused)
-
- - `uint8_t timing accuracy`  
-    (unused)
+ - `uint64_t utt_timestamp_us`  
+    Timestamp associated with the last received UTT-IE from this node. The host
+    will use the `timestamp_us` value from [`CNF_DATA_TX`][tx-cnf] and
+    [`IND_DATA_RX`][rx].
+ - `uint24_t ufsi` (from UTT-IE)
+ - `uint8_t dwell_interval` (from US-IE)
 
 Only present if `FHSS_TYPE_LFN_UC`:
 
- - `uint64_t rx_timestamp_mac_ms`  
-    Timestamp (relative to the date of the RCP reset) of the last received
-    message for this node. The relevant information can found in the field
-    `timestamp_mac_us` of commands `CNF_DATA_TX` and `IND_DATA_RX`.
-    FIXME: Is uint32_t in milliseconds would be sufficient? Should we spend 4
-    extra bytes for this data?
-
- - `uint16_t slot_number`  
-
- - `uint24_t interval_offset_ms`  
-
- - `uint24_t interval_ms`  
-
- - `uint8_t  clock_drift`  
-    (unused)
-
- - `uint8_t  timing accuracy`  
-    (unused)
-
-Only present if `FHSS_TYPE_FFN_BC`: (TBD)
-
- - `uint16_t slot_number`  
-
- - `uint32_t interval_offset_ms`  
-
-Only present if `FHSS_TYPE_LFN_BC`: (TBD)
-
- - `uint16_t slot_number`  
-
- - `uint24_t interval_offset_ms`  
+ - `uint64_t lutt_timestamp_us`  
+    Timestamp associated with the last received LUTT-IE from this node. The host
+    will use the `timestamp_us` value from [`CNF_DATA_TX`][tx-cnf] and
+    [`IND_DATA_RX`][rx].
+ - `uint16_t slot` (from LUTT-IE)
+ - `uint24_t interval_offset_ms` (from LUTT-IE)
+ - `uint24_t interval_ms` (from LUS-IE)
 
 Only present if `FHSS_TYPE_LFN_PA`:
 
- - `uint16_t first_slot`  
+ - `uint64_t lnd_timestamp_us`  
+    Timestamp associated with the last received LND-IE from this node. The host
+    will use the `timestamp_us` value from [`IND_DATA_RX`][rx].
+ - `uint24_t response_delay_ms` (from LND-IE)
+ - `uint8_t  slot_duration_ms` (from LND-IE)
+ - `uint8_t  slot_count` (from LND-IE)
+ - `uint16_t slot_first` (from LND-IE)
 
- - `uint8_t  slot_time_ms`  
+Other FHSS types have no additional fields.
 
- - `uint8_t  slot_count`  
+Only present if `FHSS_DEFAULT == 0`:
 
- - `uint24_t response_delay_ms`  
+ - `struct chan_seq`  
+   See ["Channel Sequence"][chan-seq].
 
-Only present if `FHSS_TYPE_ASYNC`:
+For each bit set in `FRAME_COUNTERS`:
 
- - `uint16_t max_tx_duration_ms`  
+ - `uint32_t frame_counter`  
+   Minimum frame counter to accept when verifying acknowlegment frames. The
+   associated key index maps to the bit offset (from 1 to 7). See
+   ["Security"][sec].
 
-Only present if `FHSS_CHAN_FUNC_FIXED`:
+Only present if `MODE_SWITCH`:
 
- - `uint16_t chan_nr`  
-    Fixed channel value.
-
-Only present if `FHSS_CHAN_FUNC_DH1`:
-
- - `uint8_t chan_mask_len`  
-    Length of the next field. Maximum value is 64.
-
- - `uint8_t chan_mask[]`  
-    Bitmap of masked channels.
-
-Only present if `FHSS_CHAN_FUNC_TR51`:
-
- TBD
-
-Only present if `USE_MODE_SWITCH`:
-
- - `uint8_t phy_modes[2][4]`  
-    An array of `phy_mode_id` and number of attempt to do for each of them.
+ - `struct rate_config[4]`  
+    Fixed length and ordered array of rates to attempt until the transmission
+    is successful, or all rates have been tried.
+     - `uint8_t phy_mode_id`: Wi-SUN _PhyModeId_, must be in the group selected
+        with [`SET_RADIO`][rf-set].
+     - `uint8_t tx_attempts`: The maximum number of attempts allowed for this
+        rate. Once this limit is exceeded, the next entry will be tried.
+     - `int8_t tx_power_dbm`: The TX power to use with this entry, saturates to
+        the value configured with [`SET_RADIO_TX_POWER`][rf-pow].
 
 ### `0x12 CNF_DATA_TX`
 
@@ -429,6 +402,7 @@ frequency hopping parameters, see ["FHSS configuration"][fhss].
 [rf-list]: #0x22-cnf_radio_list
 [rf-set]:  #0x23-set_radio
 [rf-reg]:  #0x24-set_radio_regulation
+[rf-pow]:  #0x25-set_radio_tx_power
 
 ### `0x20 REQ_RADIO_ENABLE`
 
@@ -491,7 +465,7 @@ Configure the radio parameters.
  - `uint8_t mcs`  
     MCS to be used if `index` points to an OFDM modulation.
 
- - `bool enable_ms` (API > 2.0.1)  
+ - `bool enable_mode_switch` (API > 2.0.1)  
     Enable mode switch in reception at PHY level (PHR), using all the PHY
     configurations available in the same group as the selected PHY. Note that
     mode switch cannot be disabled at MAC level (MAC command frame).
@@ -542,6 +516,24 @@ of these commands for a more detailed explanation.
 | TX Unicast PAN Advert to LFN          | [`REQ_DATA_TX`][tx-req]     |
 | TX Broadcast to LFN                   | [`SET_FHSS_LFN_BC`][bc-lfn] |
 | TX Asynchronous (MLME-WS-ASYNC-FRAME) | [`SET_FHSS_ASYNC`][async]   |
+
+In addition, the RCP is responsible for filling some timing related fields in
+transmitted packets, based on active schedules:
+
+  - UTT-IE (see [`SET_FHSS_UC`][uc]):
+    - Unicast Fractional Sequence Interval (UFSI)
+  - BT-IE (see [`SET_FHSS_FFN_BC`][bc]):
+    - Broadcast Slot Number
+    - Broadcast Interval Offset
+  - LBT-IE (see [`SET_FHSS_LFN_BC`][bc-lfn]):
+    - LFN Broadcast Slot Number
+    - LFN Broadcast Interval Offset
+  - LTO-IE:
+    - Offset  
+      The host sets this field as an offset relative to the start of the LFN
+      broadcast window (see [`SET_FHSS_LFN_BC`][bc-lfn]). The RCP recomputes
+      the offset to be relative to the destination LFN's unicast schedule,
+      based on the timing information passed in [`REQ_DATA_TX`][tx-req].
 
 ### Channel Sequence
 
@@ -684,6 +676,7 @@ packet.
 > security level `6` and key ID mode `1` with key indices 1 through 7. Frame
 > counter is always used.
 
+[sec]: #security
 [cpc-sec]: https://github.com/SiliconLabs/cpc-daemon/blob/main/readme.md#encrypted-serial-link
 
 ### `0x40 SET_SEC_KEY`
