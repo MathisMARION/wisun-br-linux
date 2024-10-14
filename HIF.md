@@ -153,6 +153,7 @@ will assume that the API version is `2.0.0`. This command should be sent after
 ## Send and receive data
 
 [tx-req]: #0x10-req_data_tx
+[rx]:     #0x13-ind_data_rx
 
 ### `0x10 REQ_DATA_TX`
 
@@ -397,71 +398,103 @@ Only present if `HAVE_MODE_SWITCH_STAT`:
 
 ## Radio configuration
 
-[rf-get]: #0x21-req_radio_list
+PHY configuration and RCP level regional regulation enforcement. For
+frequency hopping parameters, see ["FHSS configuration"][fhss].
+
+[rf-get]:  #0x21-req_radio_list
+[rf-list]: #0x22-cnf_radio_list
+[rf-set]:  #0x23-set_radio
 
 ### `0x20 REQ_RADIO_ENABLE`
 
-Start (or stop) receiving radio data. `SET_RADIO`, `SET_FHSS_UC` (and probably
-several others) must have been called before this function.
+Start the radio module. Before this, no packet can be transmitted
+([`REQ_DATA_TX`][tx-req]) nor received ([`IND_DATA_RX`][rx]). Some
+configuration needs to be done before calling this command, typically a PHY
+must be selected with [`SET_RADIO`][rf-set], and a unicast schedule must be
+configured with [`SET_FHSS_UC`][uc].
 
- - `bool value`  
-    Only `true` is implemented
+Body of this command is empty.
 
 ### `0x21 REQ_RADIO_LIST`
 
-Get the list of radio configuration supported by the device.
+Request the list of radio configuration supported by the device, typically
+issued by the host during a startup sequence before selecting a PHY
+configuration. The RCP will answer with a series of [`CNF_RADIO_LIST`][rf-list]
+commands.
 
 Body of this command is empty.
 
 ### `0x22 CNF_RADIO_LIST`
 
-List of radio configuration supported by the device, in response to
-`REQ_RADIO_LIST`.
+List of radio configuration supported by the RCP, as configured during project
+generation. Entries are defined in groups of mode-switch compatible PHYs. For
+OFDM configurations, all MCS are defined in the same entry.
+
+ - `uint8_t entry_size`  
+    Size of a radio configuration entry in bytes. This is meant to support API
+    evolution.
 
  - `bool list_end`  
-    If not set, the list will continue in another `CNF_RADIO_CONFIG_LIST`.
+    If not set, the list will continue in another [`CNF_RADIO_LIST`][rf-list].
 
- - `uint8_t len`  
-    Number of entries in next field.
+ - `uint8_t count`  
+    Number of radio configuration entries in next field.
 
  - `struct rf_config[]`  
     - `uint16_t flags`
         - `0x0001`: If set, this entry is in same group than the previous.
-        - `0xFFF0`: Supported MCSs (from MCS0 to MCS11)
-    - `uint8_t rail_phy_mode_id`: Same than phy_mode_id, but for OFDM, only MCS0
-      is retrieved.
-    - `uint32_t chan_base_khz`
-    - `uint32_t chan_spacing_hz`
-    - `uint16_t chan_count`
+        - `0x01FE`: Bitfield of supported OFDM MCS (from MCS0 to MCS11).
+    - `uint8_t rail_phy_mode_id`  
+       Wi-SUN _PhyModeId_. For OFDM, only the _PhyType_ is set, and MCS support
+       is indicated in the `flags` field.
+    - `uint32_t chan_f0`  
+       Frequency of the first channel in Hz.
+    - `uint32_t chan_spacing`  
+       Channel spacing in Hz.
+    - `uint16_t chan_count`  
+       Number of channels without holes in the spectrum.
+    - `uint16_t sensitivity` (API >= 2.4.0)  
+       Minimum RX sensitivity in dBm for this PHY.
 
 ### `0x23 SET_RADIO`
 
 Configure the radio parameters.
 
  - `uint8_t index`  
-    Index in the `rf_config` list
+    Index in the `rf_config` list.
 
  - `uint8_t mcs`  
-    MCS to be used if `index` points to an OFDM modulation
+    MCS to be used if `index` points to an OFDM modulation.
+
+ - `bool enable_ms` (API > 2.0.1)  
+    Enable mode switch in reception at PHY level (PHR), using all the PHY
+    configurations available in the same group as the selected PHY. Note that
+    mode switch cannot be disabled at MAC level (MAC command frame).
+
+> [!NOTE]
+> The host is responsible for advertising a list of supported _PhyModeId_ in a
+> POM-IE. There may be more PHY supported in the RCP than advertised since the
+> IE format restricts to 16 entries.
 
 ### `0x24 SET_RADIO_REGULATION`
 
-Enable specific RF regulation rules. Most regulations only make sense with
+Enable specific radio regulation rules. Most regulations only make sense with
 specific channel configurations.
 
  - `uint32_t value`  
-    - `0`: None
-    - `1`: North America (FCC)
-    - `2`: Japan (ARIB)
-    - `3`: Europe (ETSI)
+    - `0`: None (disabled, default)
+    - `2`: Japan ([ARIB][arib])
+    - `5`: India ([WPC][wpc])  
+
+[arib]: https://www.arib.or.jp/
+[wpc]:  https://dot.gov.in/spectrum-management/2457
 
 ### `0x25 SET_RADIO_TX_POWER`
 
-FIXME: define unit
-
-FIXME: define default value
-
- - `int32_t value`  
+ - `int8_t tx_power_dbm`  
+    Maximum transmission power in dBm. The RCP may use a lower value based on
+    internal decision making or hardware limitations but will never exceed the
+    given value. The default value is 14dBm.
 
 ## Frequency Hopping (FHSS) configuration
 
