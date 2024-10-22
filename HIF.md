@@ -186,9 +186,35 @@ Wi-SUN:
   - Destination address mode must be either `0` or `3`.
   - See ["Security"][sec] for limits on the auxiliary security header.
 
+[cca]:    #channel-access-and-retries
 [tx-req]: #0x10-req_data_tx
 [tx-cnf]: #0x12-cnf_data_tx
 [rx]:     #0x13-ind_data_rx
+
+### Channel Access and Retries
+
+In Wi-SUN, all transmissions require the use of Clear Channel Assessment (CCA),
+but the way attempts are performed differs depending on the [FHSS type][fhss]
+used.
+
+Unicast and broadcast ***to FFNs*** use the IEEE 802.15.4 CSMA-CA algorithm
+with the following parameters:
+
+| IEEE 802.15.4 MAC PIB | Value | Description |
+|-----------------------|-------|-------------|
+| `macMinBe`            | `3`   | Minimum Backoff Exponent (BE) for CSMA-CA.
+| `macMaxBe`            | `5`   | Maximum Backoff Exponent (BE) for CSMA-CA.
+| `macMaxCsmaBackoffs`  | `8`   | Number of CSMA-CA backoffs to attempt before declaring failure.
+| `macMaxFrameRetries`  | `19`  | Number of retries allowed after a transmission failure.
+
+Unicast and broadcast transmissions ***to LFNs*** can be conceived as if they
+use the CSMA-CA algorithm, where the backoff is not randomized but instead
+corresponds to the next available TX slot. This detail matters for counting
+CCA failures versus transmission failures.
+
+***Asynchronous*** transmissions use one CCA per channel, and skip the channel on
+failure without attempting any retries. No overall CCA failure is returned in
+[`CNF_DATA_TX`][tx-cnf] for these transmissions.
 
 ### `0x10 REQ_DATA_TX`
 
@@ -292,7 +318,9 @@ Only present if `MODE_SWITCH`:
      - `uint8_t phy_mode_id`: Wi-SUN _PhyModeId_, must be in the group selected
         with [`SET_RADIO`][rf-set].
      - `uint8_t tx_attempts`: The maximum number of attempts allowed for this
-        rate. Once this limit is exceeded, the next entry will be tried.
+        rate. Once this limit is exceeded, the next entry will be tried. Note
+        that this valude overrides `macMaxFrameRetries` described in
+        ["Channel Access and Retries"][cca].
      - `int8_t tx_power_dbm`: The TX power to use with this entry, saturates to
         the value configured with [`SET_RADIO_TX_POWER`][rf-pow].
 
@@ -337,11 +365,12 @@ request bit set in the header.
     Channel number used in the successful transmission.
 
  - `uint8_t cca_failures`  
-    Number of times channel access has failed in the last CSMA-CA attempt.
+    Number of times channel access has failed consecutively (due to CCA failure
+    or busy RX). For aknowledged frames, this counter is reset whenever the
+    frame is transmitted on the radio but no acknowledgement is received.
 
  - `uint8_t tx_failures`  
     Number of transmission failures (does not account for CCA failures).
-    <!-- TODO: Make this description more precise. -->
 
  - `uint8_t reserved`
 
@@ -351,7 +380,7 @@ Status codes:
 |-------|-------------
 |`0x00` | Success.
 |`0x01` | Not enough memory available.
-|`0x02` | CCA failure on all channel access attempts.
+|`0x02` | Channel access failure (CCA failure or busy RX).
 |`0x03` | No ACK received (if ACK bit set in request).
 |`0x04` | Frame spent too long in RCP (10s for unicast, 20s for broadcast, 40s for async, 300s for LFN).
 |`0x05` | RCP internal error (reach out Silicon Labs support).
