@@ -5,6 +5,35 @@ Wi-SUN Radio Co-Processor (RCP). The RCP implements IEEE 802.15.4 frame
 transmission and reception using Wi-SUN frequency hopping and this API
 allows a host to control it using commands sent on a serial bus.
 
+## Acronyms
+
+| Acronym | Source        | Meaning
+|---------|---------------|---------
+| FHSS    |               | Frequency Hopping Spread Spectrum
+| EUI-64  | IEEE RA       | [64-bit Extended Unique Identifier][eui64]
+| CCA     | IEEE 802.15.4 | Clear Channel Assessment
+| CSMA-CA | IEEE 802.15.4 | Carrier Sense Multiple Access with Collision Avoidance
+| IE      | IEEE 802.15.4 | Information Element
+| BT-IE   | Wi-SUN        | Broadcast Timing IE
+| FFN     | Wi-SUN        | Full Function Node
+| LFN     | Wi-SUN        | Limited Function Node
+| LBS-IE  | Wi-SUN        | LFN Broadcast Schedule IE
+| LBT-IE  | Wi-SUN        | LFN Broadcast Timing IE
+| LND-IE  | Wi-SUN        | LFN Network Discovery IE
+| LTO-IE  | Wi-SUN        | LFN Timing Offset IE
+| LUS-IE  | Wi-SUN        | LFN Unicast Schedule IE
+| LUTT-IE | Wi-SUN        | LFN Unicast Timing and Frame Type IE
+| POM-IE  | Wi-SUN        | PHY Operating Modes IE
+| US-IE   | Wi-SUN        | Unicast Schedule IE
+| UTT-IE  | Wi-SUN        | Unicast Timing and Frame Type IE
+| CPC     | Silicon Labs  | [Co-Processor Communication][cpc]
+| HIF     | Silicon Labs  | Hardware Interface
+| RAIL    | Silicon Labs  | [Radio Abstraction Interface Layer][rail]
+| RCP     | Silicon Labs  | Radio Co-Processor
+
+[eui64]: https://standards.ieee.org/products-programs/regauth/
+[rail]:  https://docs.silabs.com/rail/latest/rail-start
+
 ## General observations
 
 In this specification, the prefix used in the command means:
