@@ -123,23 +123,47 @@ a debugger, etc...
 
 ### `0x05 IND_FATAL`
 
-Commands don't reply in case of success. If the device gets misconfigured or if
-any other fatal error happens, the device will reset. In this case, `IND_FATAL`
-may be sent before `IND_RESET`. It contains information about the error. It can
-be used to display the error to the user for debugging purpose.
+Commands do not send a reply upon success. If the RCP is misconfigured or
+encounters a fatal error happens, it will reset. In such cases, a `IND_RESET`
+message will be sent after `IND_FATAL`, providing details about the error.
+This information can be used to display the error to the user for debugging
+purposes.
 
- - `uint8_t error_code`  
-    Known error codes:
-     - `0x01`: unsupported host API (`SET_HOST_API`)
-     - `0x02`: unsupported radio configuration (`SET_RADIO`)
-     - `0x03`: radio not configured (`REQ_RADIO_ENABLE`)
-     - `0x04`: enable to allocate entry (`SET_SEC_FRAME_COUNTER_RX`)
-     - `0x05`: enable to allocate entry (`SET_FILTER_SRC16`)
-     - `0x06`: enable to allocate entry (`SET_FILTER_SRC64`)
-     - `0xFF`: unexpected assert
+ - `uint16_t error_code`  
+    Refer to the table below for the detailed list of errors.
 
  - `char error_string[]`  
-    Human readable error.
+    Human-readable error message.
+
+| Name                 | Value  | Description                                                 |
+|----------------------|--------|-------------------------------------------------------------|
+|`EBUG`                |`0x0000`| An assert was triggered, reach out Silicon Labs support.    |
+|`ECRC`                |`0x0001`| A framing error was detected on the bus.                    |
+|`EHIF`                |`0x0002`| A parsing error occured while processing a command.         |
+|`ENOBTL`              |`0x0003`| The RCP was not compiled with a bootloader.                 |
+|`ENORF`               |`0x0004`| The radio layer has not been started.                       |
+|`ENOMEM`              |`0x0005`| Not enough memory available.                                |
+|`EINVAL`              |`0x1000`| Invalid parameter (generic).                                |
+|`EINVAL_HOSTAPI`      |`0x1001`| Incompatible host API version.                              |
+|`EINVAL_PHY`          |`0x1002`| Invalid PHY selection.                                      |
+|`EINVAL_TXPOW`        |`0x1003`| Invalid TX power.                                           |
+|`EINVAL_REG`          |`0x1004`| Invalid regulation code ([`SET_RADIO_REGULATION`][rf-reg]). |
+|`EINVAL_FHSS`         |`0x1005`| Invalid frequency hopping configuration (generic).          |
+|`EINVAL_FHSS_TYPE`    |`0x1006`| Invalid FHSS type ([`REQ_DATA_TX`][tx-req]).                |
+|`EINVAL_CHAN_MASK`    |`0x1007`| Invalid channel mask.                                       |
+|`EINVAL_CHAN_FUNC`    |`0x1008`| Invalid channel function.                                   |
+|`EINVAL_ASYNC_TXLEN`  |`0x1009`| Invalid asynchronous transmission maximum duration ([`SET_FHSS_ASYNC`][async]).|
+|`EINVAL_HANDLE`       |`0x100a`| Invalid packet handle.                                      |
+|`EINVAL_KEY_INDEX`    |`0x100b`| Invalid key index.                                          |
+|`EINVAL_FRAME_LEN`    |`0x100c`| Invalid IEEE 802.15.4 frame length.                         |
+|`EINVAL_FRAME_VERSION`|`0x100d`| Invalid IEEE 802.15.4 frame version.                        |
+|`EINVAL_FRAME_TYPE`   |`0x100c`| Invalid IEEE 802.15.4 frame type.                           |
+|`EINVAL_ADDR_MODE`    |`0x100e`| Invalid IEEE 802.15.4 address mode.                         |
+|`EINVAL_SCF`          |`0x100f`| Invalid IEEE 802.15.4 security control field.               |
+|`EINVAL_FRAME`        |`0x1010`| Invalid IEEE 802.15.4 frame (generic).                      |
+|`EINVAL_CHAN_FIXED`   |`0x1011`| Invalid fixed channel.                                      |
+|`ENOTSUP`             |`0x2000`| Unsupported feature (generic).                              |
+|`ENOTSUP_FHSS_DEFAULT`|`0x2001`| Unsupported configuration mode for selected FHSS type ([`REQ_DATA_TX`][tx-req]).|
 
 ### `0x06 SET_HOST_API`
 
@@ -404,6 +428,7 @@ frequency hopping parameters, see ["FHSS configuration"][fhss].
 [rf-get]:  #0x21-req_radio_list
 [rf-list]: #0x22-cnf_radio_list
 [rf-set]:  #0x23-set_radio
+[rf-reg]:  #0x24-set_radio_regulation
 
 ### `0x20 REQ_RADIO_ENABLE`
 
