@@ -1,3 +1,5 @@
+[![License: MSLA](https://img.shields.io/badge/License-MSLA-blue.svg)](LICENSES/LicenseRef-MSLA.txt)
+
 [<img align="right" src="misc/wisun-logo.png" width="300" alt="Wi-SUN Logo">][wisun]
 
 Wi-SUN Linux Border Router
