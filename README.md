@@ -1,4 +1,5 @@
 [![License: MSLA](https://img.shields.io/badge/License-MSLA-blue.svg)](LICENSES/LicenseRef-MSLA.txt)
+![Build Status](https://github.com/MathisMARION/wisun-br-linux/actions/workflows/build.yaml/badge.svg?branch=wip/mm/ci)
 
 [<img align="right" src="misc/wisun-logo.png" width="300" alt="Wi-SUN Logo">][wisun]
 
