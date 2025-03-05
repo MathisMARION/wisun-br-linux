@@ -1,0 +1,50 @@
+# SPDX-License-Identifier: LicenseRef-MSLA
+# SPDX-Copyright-Text: (c) 2025 Silicon Laboratories Inc. (www.silabs.com)
+name: cppcheck
+on: workflow_dispatch
+jobs:
+  cppcheck:
+    runs-on: ${{ github.repository_owner == 'SiliconLabsInternal' && 'silabs-internal' || 'ubuntu-24.04' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -y
+          [ ${{ github.repository_owner }} = SiliconLabsInternal ] && \
+          sudo apt-get install -y build-essential
+          sudo apt-get install -y ninja-build \
+                                  libnl-3-dev libnl-route-3-dev \
+                                  libcap-dev libsystemd-dev
+          sudo apt-get install -y cppcheck
+      - name: Install MbedTLS
+        run: |
+          git clone --branch v3.6.2 \
+                    --depth 1 \
+                    --recurse-submodules \
+                    --shallow-submodules \
+                    https://github.com/ARMmbed/mbedtls
+          cmake -S mbedtls \
+                -B mbedtls/build \
+                -D ENABLE_PROGRAMS=OFF \
+                -D ENABLE_TESTING=OFF \
+                -G Ninja
+          ninja -C mbedtls/build
+          sudo ninja -C mbedtls/build install
+      - name: Generate compile_commands.json
+        run: |
+          cmake -S . \
+                -B build \
+                -D AUTH_LEGACY=OFF \
+                -D COMPILE_WSRD=ON \
+                -D COMPILE_DEVTOOLS=ON \
+                -D COMPILE_DEMOS=ON \
+                -D CMAKE_EXPORT_COMPILE_COMMANDS=ON \
+                -G Ninja
+          ninja -C build version.c
+      - name: Run cppcheck
+        run: |
+          cppcheck --project=build/compile_commands.json \
+                   --enable=warning,portability \
+                   --check-level=exhaustive \
+                   --error-exitcode=1 \
+                   -j $(nproc)
