@@ -1,0 +1,65 @@
+# SPDX-License-Identifier: LicenseRef-MSLA
+# SPDX-Copyright-Text: (c) 2024 Silicon Laboratories Inc. (www.silabs.com)
+name: Coverity
+on:
+  workflow_dispatch:
+    inputs:
+      email:
+        description: Email used when submitting build to Coverity.
+        required: true
+jobs:
+  coverity:
+    runs-on: 'ubuntu-24.04'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y ninja-build \
+                                  libnl-3-dev libnl-route-3-dev \
+                                  libcap-dev libsystemd-dev
+      - name: Install MbedTLS
+        run: |
+          git clone --branch v3.6.2 \
+                    --depth 1 \
+                    --recurse-submodules \
+                    --shallow-submodules \
+                    https://github.com/ARMmbed/mbedtls
+          cmake -S mbedtls \
+                -B mbedtls/build \
+                -D ENABLE_PROGRAMS=OFF \
+                -D ENABLE_TESTING=OFF \
+                -G Ninja
+          ninja -C mbedtls/build
+          sudo ninja -C mbedtls/build install
+      - name: Download Coverity
+        env:
+          COVERITY_TOKEN: ${{ secrets.COVERITY_TOKEN }}
+        run: |
+          curl https://scan.coverity.com/download/linux64 \
+               --form project=wisun-br-linux \
+               --form token="$COVERITY_TOKEN" \
+               --output cov-analysis.tar.gz
+          tar xzvf cov-analysis.tar.gz
+          mv cov-analysis-linux64-* cov-analysis
+      - name: Build with Coverity
+        run: |
+          cmake -S . \
+                -B build \
+                -D AUTH_LEGACY=OFF \
+                -D COMPILE_WSRD=ON \
+                -D COMPILE_DEVTOOLS=ON \
+                -D COMPILE_DEMOS=ON \
+                -G Ninja
+          cov-analysis/bin/cov-build --dir cov-int ninja -C build
+      - name: Upload build
+        env:
+          COVERITY_TOKEN: ${{ secrets.COVERITY_TOKEN }}
+        run: |
+          tar czvf cov-int.tar.gz cov-int
+          curl https://scan.coverity.com/builds \
+               --form project=wisun-br-linux  \
+               --form token="$COVERITY_TOKEN" \
+               --form email=${{ inputs.email }} \
+               --form version="$(git describe --tags --dirty --always)" \
+               --form file=@cov-int.tar.gz
