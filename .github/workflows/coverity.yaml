@@ -64,9 +64,9 @@ jobs:
           COVERITY_TOKEN: ${{ secrets.COVERITY_TOKEN }}
         run: |
           tar czvf cov-int.tar.gz cov-int
-          curl https://scan.coverity.com/builds \
-               --form project=wisun-br-linux  \
-               --form token="$COVERITY_TOKEN" \
-               --form email=${{ inputs.email }} \
-               --form version="$(git describe --tags --dirty --always)" \
-               --form file=@cov-int.tar.gz
+#         curl https://scan.coverity.com/builds \
+#              --form project=wisun-br-linux  \
+#              --form token="$COVERITY_TOKEN" \
+#              --form email=${{ inputs.email }} \
+#              --form version="$(git describe --tags --dirty --always)" \
+#              --form file=@cov-int.tar.gz
