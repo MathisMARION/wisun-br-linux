@@ -32,7 +32,14 @@ jobs:
                 -G Ninja
           ninja -C mbedtls/build
           sudo ninja -C mbedtls/build install
+      - name: Cache Coverity
+        id: cov-analysis-cache
+        uses: action/cache@v4
+        with:
+          path: cov-analysis
+          key: cov-analysis
       - name: Download Coverity
+        if: steps.cov-analysis-cache.outputs.cache-hit != 'true'
         env:
           COVERITY_TOKEN: ${{ secrets.COVERITY_TOKEN }}
         run: |
