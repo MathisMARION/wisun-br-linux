@@ -1,0 +1,12 @@
+name: Test Workflow
+on: workflow_dispatch
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Print with env
+        env:
+          TEST_SECRET: ${{ secrets.TEST_SECRET }}
+        run: echo "$TEST_SECRET"
+      - name: Print without env
+        run: echo "${{ secrets.TEST_SECRET }}"
